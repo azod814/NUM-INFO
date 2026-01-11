@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 NUM-INFO
-Author : azod08
+Author : azod814
 Legal & Educational Phone Number Intelligence Tool
 """
 
