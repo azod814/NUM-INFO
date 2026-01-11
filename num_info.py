@@ -13,6 +13,7 @@ from rich.text import Text
 from rich import box
 import json
 import sys
+import pycountry
 
 console = Console()
 
@@ -27,7 +28,7 @@ def banner():
 ██║ ╚████║╚██████╔╝██║ ╚═╝ ██║      ██║██║ ╚████║██║     ╚██████╔╝
 ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝      ╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ 
 
-Legal Phone Number Information Tool
+NUM-INFO  |  Legal Phone Information Tool
 Author: azod814
 """, style="bold green")
 
@@ -42,29 +43,38 @@ def load_public_names():
     except:
         return {}
 
-# ---------------- COUNTRY SELECT ---------------- #
+# ---------------- COUNTRY INPUT (UPDATED) ---------------- #
 
-def select_country():
-    table = Table(box=box.SIMPLE, header_style="bold green")
-    table.add_column("Option")
-    table.add_column("Country")
-    table.add_column("Code")
+def country_input():
+    console.print("\n[bold green]Country Selection[/bold green]")
+    console.print(
+        "[cyan]1)[/cyan] Enter country code manually (recommended)\n"
+        "[cyan]2)[/cyan] Select country name (helper mode)\n"
+    )
 
-    table.add_row("1", "India", "+91")
-    table.add_row("2", "Pakistan", "+92")
-    table.add_row("3", "Manual", "Custom")
+    choice = Prompt.ask("Choose option", choices=["1", "2"], default="1")
+
+    # ---- MANUAL MODE ----
+    if choice == "1":
+        code = Prompt.ask("Enter country code (with +, e.g. +91)")
+        return "User Selected", code
+
+    # ---- COUNTRY LIST MODE ----
+    countries = sorted(pycountry.countries, key=lambda c: c.name)
+
+    table = Table(title="Available Countries (Reference)", box=box.SIMPLE)
+    table.add_column("Country", style="green")
+
+    for c in countries[:40]:
+        table.add_row(c.name)
 
     console.print(table)
-    choice = Prompt.ask("Choose option", choices=["1", "2", "3"])
+    console.print("[yellow]Tip:[/yellow] Type country name manually if not visible.")
 
-    if choice == "1":
-        return "India", "+91"
-    elif choice == "2":
-        return "Pakistan", "+92"
-    else:
-        return Prompt.ask("Country name"), Prompt.ask("Country code (with +)")
+    cname = Prompt.ask("Enter country name")
+    return cname, "+?"
 
-# ---------------- OPERATOR LOGIC ---------------- #
+# ---------------- OPERATOR LOGIC (INDIA BASED) ---------------- #
 
 def detect_operator(number):
     prefixes = {
@@ -103,7 +113,7 @@ def show_result(country, code, number, public_name):
     )
     table.add_row(
         "Note",
-        "If SIM was ported, old operator may appear in many tools."
+        "Ported numbers often show old operator in public tools."
     )
 
     console.print("\n")
@@ -111,8 +121,8 @@ def show_result(country, code, number, public_name):
 
     console.print(
         Panel(
-            "[bold yellow]Only public & user-provided data is used.\n"
-            "No private databases or KYC records accessed.[/bold yellow]",
+            "[bold yellow]This tool uses only public or user-provided data.\n"
+            "No private or telecom databases are accessed.[/bold yellow]",
             border_style="green"
         )
     )
@@ -122,14 +132,16 @@ def show_result(country, code, number, public_name):
 def main():
     banner()
     public_db = load_public_names()
-    country, code = select_country()
+
+    country, code = country_input()
 
     number = Prompt.ask("Enter phone number (without country code)")
     if not number.isdigit():
-        console.print("[bold red]Invalid number[/bold red]")
+        console.print("[bold red]Invalid phone number[/bold red]")
         sys.exit(1)
 
-    public_name = public_db.get(f"{code}{number}", "")
+    full_number = f"{code}{number}"
+    public_name = public_db.get(full_number, "")
 
     show_result(country, code, number, public_name)
 
